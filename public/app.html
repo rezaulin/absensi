@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dashboard — e-Pesantren</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
+<style>[x-cloak]{display:none!important}.sidebar-link{display:flex;align-items:center;gap:.75rem;padding:.625rem 1rem;border-radius:.75rem;font-size:.875rem;transition:all .2s}.sidebar-link:hover,.sidebar-link.active{background:rgba(34,197,94,.15);color:#22c55e}.stat-card{background:linear-gradient(135deg,rgba(30,41,59,.8),rgba(15,23,42,.8));border:1px solid rgba(51,65,85,.5);border-radius:1rem;padding:1.5rem}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:50;display:flex;align-items:center;justify-content:center}.modal-box{background:#1e293b;border:1px solid #334155;border-radius:1rem;padding:2rem;width:100%;max-width:32rem;max-height:90vh;overflow-y:auto}</style>
+</head>
+<body class="font-sans bg-slate-950 text-white min-h-screen" x-data="app()" x-init="init()" x-cloak>
+
+<!-- SIDEBAR -->
+<aside class="fixed top-0 left-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-40 transform transition-transform lg:translate-x-0" :class="sidebarOpen?'translate-x-0':'-translate-x-full'">
+<div class="p-4 border-b border-slate-800">
+<div class="flex items-center gap-2"><div class="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center font-bold text-sm">eP</div><span class="font-bold">e-Pesantren</span></div>
+<p class="text-xs text-slate-500 mt-1" x-text="user?.nama||''"></p>
+</div>
+<nav class="p-3 space-y-1 overflow-y-auto" style="height:calc(100vh - 8rem)">
+<template x-for="m in menuItems" :key="m.id">
+<button @click="page=m.id;sidebarOpen=false" :class="page===m.id?'active':'text-slate-400'" class="sidebar-link w-full text-left" x-show="m.roles.includes(user?.role)">
+<span x-text="m.icon"></span><span x-text="m.label"></span>
+</button>
+</template>
+</nav>
+<div class="absolute bottom-0 w-full p-3 border-t border-slate-800">
+<button @click="logout()" class="sidebar-link w-full text-left text-red-400 hover:text-red-300">🚪 <span>Logout</span></button>
+</div>
+</aside>
+
+<!-- OVERLAY -->
+<div x-show="sidebarOpen" @click="sidebarOpen=false" class="fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
+
+<!-- MAIN -->
+<main class="lg:ml-64 min-h-screen">
+<header class="sticky top-0 z-20 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<button @click="sidebarOpen=!sidebarOpen" class="lg:hidden text-slate-400"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+<h1 class="text-lg font-semibold" x-text="menuItems.find(m=>m.id===page)?.label||'Dashboard'"></h1>
+</div>
+<div class="flex items-center gap-2 text-sm text-slate-400">
+<span class="px-2 py-1 rounded-lg bg-slate-800 text-xs" x-text="user?.role||''"></span>
+<span x-text="user?.nama||''"></span>
+</div>
+</header>
+
+<div class="p-4 md:p-6">
+<!-- TOAST -->
+<div x-show="toast" x-transition class="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm shadow-lg" :class="toastType==='success'?'bg-green-600':'bg-red-600'" x-text="toast" @click="toast=''"></div>
+
+<!-- DASHBOARD -->
+<div x-show="page==='dashboard'">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<template x-for="s in dashStats" :key="s.label">
+<div class="stat-card"><p class="text-2xl font-bold" x-text="s.value"></p><p class="text-xs text-slate-400 mt-1" x-text="s.label"></p></div>
+</template>
+</div>
+</div>
+
+<!-- SANTRI -->
+<div x-show="page==='santri'">
+<div class="flex flex-wrap gap-3 mb-4">
+<input type="text" x-model="search" @input.debounce.300ms="loadSantri()" placeholder="Cari santri..." class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm flex-1 min-w-[200px] outline-none focus:border-green-500">
+<button @click="openModal('santri')" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">+ Tambah</button>
+<button @click="showImport=!showImport" class="px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium hover:bg-blue-700">📥 Import Excel</button>
+<a href="/api/santri/template/excel" class="px-4 py-2 bg-slate-700 rounded-xl text-sm font-medium hover:bg-slate-600">📄 Template</a>
+</div>
+<!-- IMPORT PANEL -->
+<div x-show="showImport" x-transition class="bg-slate-900 rounded-xl border border-slate-800 p-4 mb-4">
+<h3 class="font-semibold mb-3">Import Data Santri dari Excel</h3>
+<p class="text-xs text-slate-400 mb-3">Format kolom: Nama, NIS, Jenis Kelamin (L/P), Tempat Lahir, Tanggal Lahir, Alamat, Nama Ayah, Nama Ibu, No HP Wali, Tahun Masuk</p>
+<input type="file" accept=".xlsx,.xls" @change="handleImportExcel($event)" class="block w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-green-600 file:text-white hover:file:bg-green-700 mb-3">
+<div x-show="importLoading" class="text-yellow-400 text-sm">⏳ Sedang mengimport...</div>
+<div x-show="importResult" class="mt-2 p-3 rounded-lg text-sm" :class="importResult?.success?'bg-green-500/20 text-green-300':'bg-red-500/20 text-red-300'">
+<p x-text="importResult?.message"></p>
+<p x-show="importResult?.failed>0" class="mt-1 text-yellow-400" x-text="'Gagal: '+importResult?.failed"></p>
+<template x-if="importResult?.errors?.length>0"><ul class="mt-1 text-xs list-disc pl-4"><template x-for="e in importResult.errors"><li x-text="e"></li></template></ul></template>
+</div>
+</div>
+<div class="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
+<table class="w-full text-sm">
+<thead><tr class="border-b border-slate-800 text-slate-400"><th class="p-3 text-left">Nama</th><th class="p-3 text-left">NIS</th><th class="p-3 text-left hidden md:table-cell">Kamar</th><th class="p-3 text-left hidden md:table-cell">Kelas</th><th class="p-3 text-left">Status</th><th class="p-3">Aksi</th></tr></thead>
+<tbody>
+<template x-for="s in items" :key="s.id">
+<tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
+<td class="p-3 font-medium" x-text="s.nama"></td>
+<td class="p-3 text-slate-400" x-text="s.nis||'-'"></td>
+<td class="p-3 text-slate-400 hidden md:table-cell" x-text="s.kamar_nama||'-'"></td>
+<td class="p-3 text-slate-400 hidden md:table-cell" x-text="s.kelas_nama||'-'"></td>
+<td class="p-3"><span class="px-2 py-1 rounded-lg text-xs" :class="s.status==='aktif'?'bg-green-500/20 text-green-400':'bg-red-500/20 text-red-400'" x-text="s.status"></span></td>
+<td class="p-3 text-center"><button @click="editItem('santri',s)" class="text-blue-400 hover:text-blue-300 mr-2">✏️</button><button @click="deleteItem('santri',s.id)" class="text-red-400 hover:text-red-300">🗑️</button></td>
+</tr>
+</template>
+</tbody>
+</table>
+<p x-show="items.length===0" class="p-8 text-center text-slate-500">Belum ada data</p>
+</div>
+</div>
+
+<!-- GENERIC CRUD (kelas/kegiatan/pelanggaran/prestasi/catatan/pengumuman/users) -->
+<template x-for="pg in ['kelas','kegiatan','pelanggaran','prestasi','catatan','pengumuman','users']" :key="pg">
+<div x-show="page===pg">
+<div class="flex flex-wrap gap-3 mb-4">
+<button @click="openModal(pg)" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">+ Tambah</button>
+</div>
+<div class="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
+<table class="w-full text-sm">
+<thead><tr class="border-b border-slate-800 text-slate-400"><th class="p-3 text-left">Nama/Judul</th><th class="p-3 text-left hidden md:table-cell">Detail</th><th class="p-3">Aksi</th></tr></thead>
+<tbody>
+<template x-for="item in items" :key="item.id">
+<tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
+<td class="p-3 font-medium" x-text="item.nama||item.judul||item.jenis||item.username||'-'"></td>
+<td class="p-3 text-slate-400 hidden md:table-cell" x-text="getDetail(pg,item)"></td>
+<td class="p-3 text-center"><button @click="editItem(pg,item)" class="text-blue-400 hover:text-blue-300 mr-2">✏️</button><button @click="deleteItem(pg,item.id)" class="text-red-400 hover:text-red-300">🗑️</button></td>
+</tr>
+</template>
+</tbody>
+</table>
+<p x-show="items.length===0" class="p-8 text-center text-slate-500">Belum ada data</p>
+</div>
+</div>
+</template>
+
+<!-- KAMAR PAGE -->
+<div x-show="page==='kamar'">
+<div class="flex flex-wrap gap-3 mb-4">
+<button @click="openModal('kamar')" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">+ Tambah Kamar</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<template x-for="item in items" :key="item.id">
+<div class="bg-slate-900 rounded-xl border border-slate-800 p-4 hover:border-green-500/30 transition cursor-pointer" @click="openDetailKamar(item)">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-semibold text-lg" x-text="item.nama"></h3>
+<div class="flex gap-1">
+<button @click.stop="editItem('kamar',item)" class="text-blue-400 hover:text-blue-300 text-sm">✏️</button>
+<button @click.stop="deleteItem('kamar',item.id)" class="text-red-400 hover:text-red-300 text-sm">🗑️</button>
+</div>
+</div>
+<div class="text-sm text-slate-400 space-y-1">
+<p>👥 Santri: <span class="text-white" x-text="item.jumlah_santri||0"></span> / <span x-text="item.kapasitas||20"></span></p>
+<p x-show="item.gedung">🏢 <span x-text="item.gedung"></span></p>
+</div>
+<div class="mt-2"><div class="w-full bg-slate-800 rounded-full h-2"><div class="bg-green-500 h-2 rounded-full transition-all" :style="'width:'+Math.min(100,((item.jumlah_santri||0)/(item.kapasitas||20))*100)+'%'"></div></div></div>
+</div>
+</template>
+</div>
+<p x-show="items.length===0" class="p-8 text-center text-slate-500">Belum ada data kamar</p>
+</div>
+
+<!-- KELOMPOK PAGE -->
+<div x-show="page==='kelompok'">
+<div class="flex flex-wrap gap-3 mb-4">
+<select x-model="kelompokKegiatanFilter" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none">
+<option value="">Semua Kegiatan</option>
+<template x-for="k in kegiatanList" :key="k.id"><option :value="k.id" x-text="k.nama"></option></template>
+</select>
+<button @click="openModal('kelompok')" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">+ Tambah Kelompok</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<template x-for="item in filteredKelompok" :key="item.id">
+<div class="bg-slate-900 rounded-xl border border-slate-800 p-4 hover:border-green-500/30 transition cursor-pointer" @click="openDetailKelompok(item)">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-semibold" x-text="item.nama"></h3>
+<div class="flex gap-1">
+<button @click.stop="editItem('kelompok',item)" class="text-blue-400 hover:text-blue-300 text-sm">✏️</button>
+<button @click.stop="deleteItem('kelompok',item.id)" class="text-red-400 hover:text-red-300 text-sm">🗑️</button>
+</div>
+</div>
+<div class="text-sm text-slate-400 space-y-1">
+<p>📅 <span x-text="item.kegiatan_nama||'Belum diset'"></span></p>
+<p>👥 Anggota: <span class="text-white" x-text="item.jumlah_santri||0"></span></p>
+<p x-show="item.ustadz_nama">👤 <span x-text="item.ustadz_nama"></span></p>
+</div>
+</div>
+</template>
+</div>
+<p x-show="filteredKelompok.length===0" class="p-8 text-center text-slate-500">Belum ada kelompok</p>
+</div>
+
+<!-- ABSENSI -->
+<div x-show="page==='absensi'">
+<div class="flex flex-wrap gap-3 mb-4">
+<input type="date" x-model="absenTanggal" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none">
+<select x-model="absenKegiatanId" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none">
+<option value="">Pilih Kegiatan</option>
+<template x-for="k in kegiatanList" :key="k.id"><option :value="k.id" x-text="k.nama"></option></template>
+</select>
+<button @click="openAbsenSesi()" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">+ Buka Sesi</button>
+<button @click="loadAbsenSesi()" class="px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium hover:bg-blue-700">🔄 Refresh</button>
+</div>
+<div class="space-y-3">
+<template x-for="sesi in absenSesiList" :key="sesi.id">
+<div class="bg-slate-900 rounded-xl border border-slate-800 p-4">
+<div class="flex items-center justify-between mb-3">
+<div><span class="font-medium" x-text="sesi.kegiatan_nama||'Kegiatan'"></span><span class="text-xs text-slate-400 ml-2" x-text="sesi.tanggal"></span><span class="ml-2 px-2 py-0.5 rounded text-xs" :class="sesi.status==='buka'?'bg-green-500/20 text-green-400':'bg-slate-600 text-slate-300'" x-text="sesi.status"></span></div>
+<div class="flex gap-2">
+<button x-show="sesi.status==='buka'" @click="loadAbsenForm(sesi)" class="px-3 py-1 bg-blue-600 rounded-lg text-xs">Isi Absensi</button>
+<button x-show="sesi.status==='buka'" @click="tutupSesi(sesi.id)" class="px-3 py-1 bg-yellow-600 rounded-lg text-xs">Tutup</button>
+</div>
+</div>
+</div>
+</template>
+</div>
+</div>
+
+<!-- ABSEN MALAM -->
+<div x-show="page==='absen-malam'">
+<div class="flex flex-wrap gap-3 mb-4">
+<input type="date" x-model="absenTanggal" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none">
+<button @click="loadAbsenMalam()" class="px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium">Muat Data</button>
+<button @click="saveAbsenBulk('absen-malam')" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium">💾 Simpan</button>
+</div>
+<div class="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
+<table class="w-full text-sm"><thead><tr class="border-b border-slate-800 text-slate-400"><th class="p-3 text-left">Nama</th><th class="p-3">H</th><th class="p-3">I</th><th class="p-3">S</th><th class="p-3">A</th></tr></thead>
+<tbody><template x-for="(s,i) in bulkAbsen" :key="s.santri_id">
+<tr class="border-b border-slate-800/50"><td class="p-3" x-text="s.nama"></td>
+<template x-for="st in ['hadir','izin','sakit','alpha']" :key="st">
+<td class="p-3 text-center"><input type="radio" :name="'am_'+s.santri_id" :value="st" x-model="bulkAbsen[i].status"></td>
+</template></tr>
+</template></tbody></table>
+</div>
+</div>
+
+<!-- ABSEN SEKOLAH -->
+<div x-show="page==='absen-sekolah'">
+<div class="flex flex-wrap gap-3 mb-4">
+<input type="date" x-model="absenTanggal" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none">
+<select x-model="absenKelasId" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none">
+<option value="">Pilih Kelas</option>
+<template x-for="k in kelasList" :key="k.id"><option :value="k.id" x-text="k.nama"></option></template>
+</select>
+<button @click="loadAbsenSekolah()" class="px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium">Muat Data</button>
+<button @click="saveAbsenBulk('absen-sekolah')" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium">💾 Simpan</button>
+</div>
+<div class="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
+<table class="w-full text-sm"><thead><tr class="border-b border-slate-800 text-slate-400"><th class="p-3 text-left">Nama</th><th class="p-3">H</th><th class="p-3">I</th><th class="p-3">S</th><th class="p-3">A</th></tr></thead>
+<tbody><template x-for="(s,i) in bulkAbsen" :key="s.santri_id">
+<tr class="border-b border-slate-800/50"><td class="p-3" x-text="s.nama"></td>
+<template x-for="st in ['hadir','izin','sakit','alpha']" :key="st">
+<td class="p-3 text-center"><input type="radio" :name="'as_'+s.santri_id" :value="st" x-model="bulkAbsen[i].status"></td>
+</template></tr>
+</template></tbody></table>
+</div>
+</div>
+
+<!-- REKAP -->
+<div x-show="page==='rekap'">
+<div class="flex flex-wrap gap-3 mb-4">
+<select x-model="rekapBulan" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none">
+<template x-for="i in 12" :key="i"><option :value="i" x-text="['','Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][i]"></option></template>
+</select>
+<input type="number" x-model="rekapTahun" class="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm w-24 outline-none">
+<button @click="loadRekap()" class="px-4 py-2 bg-blue-600 rounded-xl text-sm font-medium">Tampilkan</button>
+<a :href="'/api/rekap/export/excel?bulan='+rekapBulan+'&tahun='+rekapTahun" class="px-4 py-2 bg-emerald-600 rounded-xl text-sm font-medium" target="_blank">📥 Excel</a>
+</div>
+<div class="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
+<table class="w-full text-sm"><thead><tr class="border-b border-slate-800 text-slate-400"><th class="p-3 text-left">Nama</th><th class="p-3">Hadir</th><th class="p-3">Izin</th><th class="p-3">Sakit</th><th class="p-3">Alpha</th><th class="p-3">Total</th></tr></thead>
+<tbody><template x-for="r in rekapData" :key="r.id">
+<tr class="border-b border-slate-800/50"><td class="p-3" x-text="r.nama"></td><td class="p-3 text-center text-green-400" x-text="r.hadir||0"></td><td class="p-3 text-center text-blue-400" x-text="r.izin||0"></td><td class="p-3 text-center text-yellow-400" x-text="r.sakit||0"></td><td class="p-3 text-center text-red-400" x-text="r.alpha||0"></td><td class="p-3 text-center" x-text="r.total||0"></td></tr>
+</template></tbody></table>
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div x-show="page==='settings'">
+<form @submit.prevent="saveSettings()" class="bg-slate-900 rounded-xl border border-slate-800 p-6 space-y-4 max-w-2xl">
+<div><label class="block text-sm text-slate-400 mb-1">Nama Pesantren</label><input type="text" x-model="settingsData.nama" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500"></div>
+<div><label class="block text-sm text-slate-400 mb-1">Nama Aplikasi</label><input type="text" x-model="settingsData.app_name" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500"></div>
+<div class="grid grid-cols-2 gap-4">
+<div><label class="block text-sm text-slate-400 mb-1">Kepala Pesantren</label><input type="text" x-model="settingsData.kepala_nama" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500"></div>
+<div><label class="block text-sm text-slate-400 mb-1">Kota</label><input type="text" x-model="settingsData.nama_kota" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500"></div>
+</div>
+<div><label class="block text-sm text-slate-400 mb-1">Alamat</label><textarea x-model="settingsData.alamat" rows="2" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500"></textarea></div>
+<button type="submit" class="px-6 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">Simpan</button>
+</form>
+</div>
+
+<!-- SUPER ADMIN -->
+<div x-show="page==='super-admin'">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<template x-for="s in superStats" :key="s.label">
+<div class="stat-card"><p class="text-2xl font-bold" x-text="s.value"></p><p class="text-xs text-slate-400 mt-1" x-text="s.label"></p></div>
+</template>
+</div>
+<div class="flex gap-3 mb-4">
+<button @click="openModal('super-tenant')" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">+ Tambah Pesantren</button>
+</div>
+<div class="bg-slate-900 rounded-xl border border-slate-800 overflow-x-auto">
+<table class="w-full text-sm"><thead><tr class="border-b border-slate-800 text-slate-400"><th class="p-3 text-left">Nama</th><th class="p-3 text-left">Slug</th><th class="p-3">Paket</th><th class="p-3">Santri</th><th class="p-3">Status</th><th class="p-3">Aksi</th></tr></thead>
+<tbody><template x-for="t in tenantList" :key="t.id">
+<tr class="border-b border-slate-800/50"><td class="p-3 font-medium" x-text="t.nama"></td><td class="p-3 text-slate-400" x-text="t.slug"></td><td class="p-3 text-center" x-text="t.paket_nama||'-'"></td><td class="p-3 text-center" x-text="t.jumlah_santri||0"></td>
+<td class="p-3 text-center"><span class="px-2 py-1 rounded-lg text-xs" :class="{'bg-green-500/20 text-green-400':t.status==='aktif','bg-yellow-500/20 text-yellow-400':t.status==='trial','bg-red-500/20 text-red-400':t.status==='suspend'}" x-text="t.status"></span></td>
+<td class="p-3 text-center space-x-1">
+<button @click="activateTenant(t.id)" class="text-green-400 text-xs hover:underline">Aktifkan</button>
+<button @click="suspendTenant(t.id)" class="text-red-400 text-xs hover:underline">Suspend</button>
+</td></tr>
+</template></tbody></table>
+</div>
+</div>
+
+</div><!-- end p-4 -->
+</main>
+
+<!-- MODAL -->
+<div x-show="modalOpen" class="modal-overlay" @click.self="modalOpen=false">
+<div class="modal-box" @click.stop>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-semibold" x-text="modalTitle"></h3>
+<button @click="modalOpen=false" class="text-slate-400 hover:text-white text-xl">&times;</button>
+</div>
+<form @submit.prevent="saveModal()">
+<div class="space-y-3" id="modal-fields">
+<template x-for="f in modalFields" :key="f.name">
+<div>
+<label class="block text-sm text-slate-400 mb-1" x-text="f.label"></label>
+<input x-show="f.type!=='select'&&f.type!=='textarea'" :type="f.type||'text'" x-model="modalData[f.name]" :required="f.required" :placeholder="f.placeholder||''" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500">
+<textarea x-show="f.type==='textarea'" x-model="modalData[f.name]" rows="3" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500"></textarea>
+<select x-show="f.type==='select'" x-model="modalData[f.name]" class="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm outline-none focus:border-green-500">
+<template x-for="o in f.options||[]" :key="o.value"><option :value="o.value" x-text="o.label"></option></template>
+</select>
+</div>
+</template>
+</div>
+<div class="flex justify-end gap-3 mt-6">
+<button type="button" @click="modalOpen=false" class="px-4 py-2 bg-slate-700 rounded-xl text-sm">Batal</button>
+<button type="submit" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium">Simpan</button>
+</div>
+</form>
+</div>
+</div>
+
+<!-- ABSENSI MODAL -->
+<div x-show="absenFormOpen" class="modal-overlay" @click.self="absenFormOpen=false">
+<div class="modal-box max-w-2xl">
+<h3 class="text-lg font-semibold mb-4">Isi Absensi</h3>
+<table class="w-full text-sm mb-4"><thead><tr class="border-b border-slate-700 text-slate-400"><th class="p-2 text-left">Nama</th><th class="p-2">H</th><th class="p-2">I</th><th class="p-2">S</th><th class="p-2">A</th></tr></thead>
+<tbody><template x-for="(s,i) in absenFormData" :key="s.santri_id">
+<tr class="border-b border-slate-800/50"><td class="p-2" x-text="s.nama"></td>
+<template x-for="st in ['hadir','izin','sakit','alpha']" :key="st">
+<td class="p-2 text-center"><input type="radio" :name="'af_'+s.santri_id" :value="st" x-model="absenFormData[i].status"></td>
+</template></tr>
+</template></tbody></table>
+<div class="flex justify-end gap-3">
+<button @click="absenFormOpen=false" class="px-4 py-2 bg-slate-700 rounded-xl text-sm">Batal</button>
+<button @click="saveAbsenSesi()" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium">Simpan Absensi</button>
+</div>
+</div>
+</div>
+
+<!-- DETAIL MODAL (Kamar / Kelompok) -->
+<div x-show="detailOpen" class="modal-overlay" @click.self="detailOpen=false">
+<div class="modal-box max-w-2xl" @click.stop>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-semibold" x-text="detailType==='kamar'?('Kamar: '+(detailData?.nama||'')):'Kelompok: '+(detailData?.nama||'')"></h3>
+<button @click="detailOpen=false" class="text-slate-400 hover:text-white text-xl">&times;</button>
+</div>
+<!-- Current members -->
+<div class="mb-4">
+<h4 class="text-sm font-medium text-slate-400 mb-2">Anggota Saat Ini (<span x-text="detailSantri.length"></span>)</h4>
+<div class="bg-slate-800 rounded-xl max-h-48 overflow-y-auto">
+<template x-for="s in detailSantri" :key="s.id">
+<div class="flex items-center justify-between px-3 py-2 border-b border-slate-700/50">
+<div><span class="font-medium text-sm" x-text="s.nama"></span><span class="text-xs text-slate-500 ml-2" x-text="s.nis||''"></span></div>
+<button @click="detailType==='kamar'?removeSantriFromKamar(s.id):removeSantriFromKelompok(s.id)" class="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded-lg bg-red-500/10">Hapus</button>
+</div>
+</template>
+<p x-show="detailSantri.length===0" class="p-3 text-center text-slate-500 text-sm">Belum ada anggota</p>
+</div>
+</div>
+<!-- Add members -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<h4 class="text-sm font-medium text-slate-400">Tambah Anggota</h4>
+<button @click="detailType==='kamar'?loadAvailableSantriKamar():loadAvailableSantriKelompok()" class="text-xs px-3 py-1 bg-blue-600 rounded-lg hover:bg-blue-700">Muat Santri</button>
+</div>
+<div x-show="availableSantri.length>0" class="bg-slate-800 rounded-xl max-h-48 overflow-y-auto mb-3">
+<template x-for="s in availableSantri" :key="s.id">
+<label class="flex items-center gap-2 px-3 py-2 border-b border-slate-700/50 hover:bg-slate-700/30 cursor-pointer">
+<input type="checkbox" :value="s.id" x-model="selectedSantriIds" class="rounded">
+<span class="text-sm" x-text="s.nama"></span>
+<span class="text-xs text-slate-500" x-text="s.nis||''"></span>
+</label>
+</template>
+</div>
+<p x-show="availableSantri.length===0" class="text-xs text-slate-500 mb-3">Klik "Muat Santri" untuk menampilkan daftar</p>
+<button x-show="selectedSantriIds.length>0" @click="detailType==='kamar'?assignSantriToKamar():assignSantriToKelompok()" class="px-4 py-2 bg-green-600 rounded-xl text-sm font-medium hover:bg-green-700">
++ Tambahkan <span x-text="selectedSantriIds.length"></span> Santri
+</button>
+</div>
+</div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

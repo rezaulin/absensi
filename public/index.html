@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>e-Pesantren — Platform Absensi Pesantren Modern</title>
+  <meta name="description" content="Platform SaaS manajemen absensi pesantren modern. Kelola santri, absensi, pelanggaran, dan rekap dengan mudah.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            primary: { 50:'#f0fdf4',100:'#dcfce7',200:'#bbf7d0',300:'#86efac',400:'#4ade80',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534',900:'#14532d' },
+            accent: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .gradient-text { background: linear-gradient(135deg, #22c55e, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+    .hero-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+    @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+    .float { animation: float 3s ease-in-out infinite; }
+    @keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+    .fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
+  </style>
+</head>
+<body class="font-sans antialiased bg-slate-950 text-white" x-data="landingApp()">
+
+  <!-- NAVBAR -->
+  <nav class="fixed top-0 w-full z-50 transition-all duration-300" :class="scrolled ? 'bg-slate-900/95 backdrop-blur-md shadow-lg' : ''">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center font-bold text-sm">eP</div>
+          <span class="text-xl font-bold">e-Pesantren</span>
+        </div>
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#fitur" class="text-sm text-slate-300 hover:text-white transition">Fitur</a>
+          <a href="#harga" class="text-sm text-slate-300 hover:text-white transition">Harga</a>
+          <a href="#daftar" class="text-sm text-slate-300 hover:text-white transition">Daftar</a>
+          <a href="/login.html" class="px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg text-sm font-medium hover:opacity-90 transition">Login</a>
+        </div>
+        <button class="md:hidden text-white" @click="mobileMenu = !mobileMenu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Mobile menu -->
+    <div x-show="mobileMenu" x-transition class="md:hidden bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-4 py-4 space-y-3">
+      <a href="#fitur" class="block text-sm text-slate-300 hover:text-white" @click="mobileMenu=false">Fitur</a>
+      <a href="#harga" class="block text-sm text-slate-300 hover:text-white" @click="mobileMenu=false">Harga</a>
+      <a href="#daftar" class="block text-sm text-slate-300 hover:text-white" @click="mobileMenu=false">Daftar</a>
+      <a href="/login.html" class="block px-4 py-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg text-sm font-medium text-center">Login</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-gradient min-h-screen flex items-center relative overflow-hidden pt-16">
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-20 left-10 w-72 h-72 bg-green-500 rounded-full filter blur-[120px]"></div>
+      <div class="absolute bottom-20 right-10 w-72 h-72 bg-blue-500 rounded-full filter blur-[120px]"></div>
+    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+      <div class="text-center max-w-4xl mx-auto">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm text-green-300 mb-8 fade-in-up">
+          <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+          Platform Absensi Pesantren Modern
+        </div>
+        <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black leading-tight mb-6 fade-in-up">
+          Kelola Pesantren<br>
+          <span class="gradient-text">Lebih Mudah & Cepat</span>
+        </h1>
+        <p class="text-lg sm:text-xl text-slate-400 mb-10 max-w-2xl mx-auto fade-in-up">
+          Sistem manajemen absensi santri berbasis cloud. Absensi harian, pelanggaran, prestasi, rekap otomatis — semua dalam satu platform.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center fade-in-up">
+          <a href="#daftar" class="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl text-lg font-semibold hover:shadow-lg hover:shadow-green-500/30 transition-all">
+            Mulai Gratis 30 Hari →
+          </a>
+          <a href="#fitur" class="px-8 py-4 glass rounded-xl text-lg font-semibold hover:bg-white/10 transition-all">
+            Lihat Fitur
+          </a>
+        </div>
+        <div class="mt-12 flex items-center justify-center gap-8 text-sm text-slate-500 fade-in-up">
+          <div class="flex items-center gap-2"><svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>Tanpa kartu kredit</div>
+          <div class="flex items-center gap-2"><svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>Setup 5 menit</div>
+          <div class="flex items-center gap-2"><svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>Subdomain gratis</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="fitur" class="py-20 bg-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">Fitur <span class="gradient-text">Lengkap</span></h2>
+        <p class="text-slate-400 max-w-2xl mx-auto">Semua yang dibutuhkan untuk mengelola pesantren modern dalam satu platform</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <template x-for="f in features" :key="f.title">
+          <div class="p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50 card-hover">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mb-4" :class="f.bg" x-text="f.icon"></div>
+            <h3 class="text-lg font-semibold mb-2" x-text="f.title"></h3>
+            <p class="text-sm text-slate-400" x-text="f.desc"></p>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="harga" class="py-20 bg-slate-950">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4">Pilih <span class="gradient-text">Paket</span></h2>
+        <p class="text-slate-400">Mulai gratis, upgrade kapan saja</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <template x-for="p in pricing" :key="p.name">
+          <div class="rounded-2xl p-8 card-hover" :class="p.popular ? 'bg-gradient-to-b from-green-600/20 to-blue-600/20 border-2 border-green-500/50 relative' : 'bg-slate-800/50 border border-slate-700/50'">
+            <div x-show="p.popular" class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-green-500 to-blue-500 rounded-full text-xs font-bold">POPULER</div>
+            <h3 class="text-xl font-bold mb-2" x-text="p.name"></h3>
+            <div class="flex items-baseline gap-1 mb-1">
+              <span class="text-4xl font-black" x-text="'Rp ' + p.price.toLocaleString('id-ID')"></span>
+              <span class="text-slate-400 text-sm">/bulan</span>
+            </div>
+            <p class="text-sm text-slate-400 mb-6" x-text="p.desc"></p>
+            <ul class="space-y-3 mb-8">
+              <template x-for="f in p.features" :key="f">
+                <li class="flex items-center gap-2 text-sm">
+                  <svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/></svg>
+                  <span x-text="f"></span>
+                </li>
+              </template>
+            </ul>
+            <a href="#daftar" class="block text-center py-3 rounded-xl font-semibold transition-all"
+               :class="p.popular ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:shadow-lg hover:shadow-green-500/30' : 'bg-slate-700 hover:bg-slate-600'">
+              Mulai Sekarang
+            </a>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
+  <!-- REGISTRATION -->
+  <section id="daftar" class="py-20 bg-slate-900">
+    <div class="max-w-xl mx-auto px-4">
+      <div class="text-center mb-10">
+        <h2 class="text-3xl font-bold mb-4">Daftarkan <span class="gradient-text">Pesantren Anda</span></h2>
+        <p class="text-slate-400">Gratis 30 hari. Tanpa komitmen.</p>
+      </div>
+      <form @submit.prevent="register()" class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-8 space-y-5">
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">Nama Pesantren</label>
+          <input type="text" x-model="form.nama" required placeholder="Contoh: Pondok Pesantren Darul Ulum" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">Subdomain (slug)</label>
+          <div class="flex">
+            <input type="text" x-model="form.slug" required placeholder="darul-ulum" @input="form.slug = form.slug.toLowerCase().replace(/[^a-z0-9-]/g,'')" class="flex-1 px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-l-xl text-white placeholder-slate-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
+            <span class="px-4 py-3 bg-slate-700 border border-l-0 border-slate-600 rounded-r-xl text-sm text-slate-400">.e-pesantren.app</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Nama Admin</label>
+            <input type="text" x-model="form.admin_nama" required placeholder="Nama lengkap" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Username</label>
+            <input type="text" x-model="form.admin_username" required placeholder="admin" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">Password</label>
+          <input type="password" x-model="form.admin_password" required minlength="6" placeholder="Minimal 6 karakter" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition">
+        </div>
+        <div x-show="regMsg" class="text-sm p-3 rounded-lg" :class="regSuccess ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'" x-text="regMsg"></div>
+        <button type="submit" :disabled="regLoading" class="w-full py-4 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl font-semibold text-lg hover:shadow-lg hover:shadow-green-500/30 transition-all disabled:opacity-50">
+          <span x-show="!regLoading">Daftar Sekarang — Gratis!</span>
+          <span x-show="regLoading">Mendaftar...</span>
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="py-12 bg-slate-950 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <div class="flex items-center justify-center gap-2 mb-4">
+        <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-lg flex items-center justify-center font-bold text-sm">eP</div>
+        <span class="text-xl font-bold">e-Pesantren</span>
+      </div>
+      <p class="text-sm text-slate-500">Platform SaaS Manajemen Absensi Pesantren Modern</p>
+      <p class="text-xs text-slate-600 mt-4">&copy; 2024 e-Pesantren. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script>
+  function landingApp() {
+    return {
+      scrolled: false,
+      mobileMenu: false,
+      form: { nama:'', slug:'', admin_nama:'', admin_username:'', admin_password:'' },
+      regLoading: false, regMsg: '', regSuccess: false,
+      features: [
+        { icon:'📋', title:'Absensi Lengkap', desc:'Absensi harian per kegiatan, absen malam, absen sekolah. Buka sesi, isi, tutup — semua tercatat rapi.', bg:'bg-green-500/20' },
+        { icon:'🏠', title:'Manajemen Kamar & Kelas', desc:'Kelola asrama, kamar, dan kelas. Assign santri ke kamar dan kelas dengan mudah.', bg:'bg-blue-500/20' },
+        { icon:'👥', title:'Kelompok & Kegiatan', desc:'Buat kelompok santri, assign ke kegiatan. Jadwal harian dan per kelas.', bg:'bg-purple-500/20' },
+        { icon:'⚠️', title:'Pelanggaran & Prestasi', desc:'Catat pelanggaran dan prestasi santri dengan sistem poin. Ranking otomatis.', bg:'bg-yellow-500/20' },
+        { icon:'📊', title:'Rekap & Export', desc:'Rekap absensi bulanan. Export ke Excel dan PDF. Laporan per santri.', bg:'bg-red-500/20' },
+        { icon:'📢', title:'Pengumuman', desc:'Broadcast pengumuman ke semua, ustadz, atau wali santri. Prioritas urgent.', bg:'bg-cyan-500/20' },
+        { icon:'👨‍🏫', title:'Multi-Role', desc:'Admin, Ustadz, dan Wali — masing-masing punya dashboard dan akses sendiri.', bg:'bg-orange-500/20' },
+        { icon:'🌐', title:'Subdomain Otomatis', desc:'Setiap pesantren punya subdomain sendiri. Contoh: darul-ulum.e-pesantren.app', bg:'bg-emerald-500/20' },
+        { icon:'📱', title:'PWA & Mobile-Ready', desc:'Bisa di-install di HP seperti aplikasi. Responsive di semua perangkat.', bg:'bg-pink-500/20' }
+      ],
+      pricing: [
+        { name:'Basic', price:150000, desc:'Untuk pesantren kecil', popular:false, features:['Maks 200 santri','20 user','Absensi lengkap','Pelanggaran & Prestasi','Pengumuman','Catatan guru'] },
+        { name:'Pro', price:250000, desc:'Paling banyak dipilih', popular:true, features:['Maks 500 santri','50 user','Semua fitur Basic','Export Excel & PDF','Custom logo','Rekap per ustadz'] },
+        { name:'Premium', price:400000, desc:'Tanpa batas', popular:false, features:['Santri unlimited','User unlimited','Semua fitur Pro','Custom domain','API access','Prioritas support'] }
+      ],
+      init() {
+        window.addEventListener('scroll', () => { this.scrolled = window.scrollY > 50; });
+      },
+      async register() {
+        this.regLoading = true; this.regMsg = '';
+        try {
+          const res = await fetch('/api/register-public', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.form)
+          });
+          const data = await res.json();
+          if (data.success) {
+            this.regSuccess = true;
+            this.regMsg = `Berhasil! Pesantren Anda sudah aktif di ${data.url}. Silakan login.`;
+          } else {
+            this.regSuccess = false;
+            this.regMsg = data.error || 'Gagal mendaftar';
+          }
+        } catch (e) {
+          this.regSuccess = false;
+          this.regMsg = 'Terjadi kesalahan. Coba lagi.';
+        }
+        this.regLoading = false;
+      }
+    };
+  }
+  </script>
+</body>
+</html>
