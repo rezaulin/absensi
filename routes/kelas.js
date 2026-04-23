@@ -54,4 +54,51 @@ router.delete('/:id', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Gagal menghapus kelas' }); }
 });
 
+// Get available santri (not in this kelas)
+router.get('/:id/available-santri', async (req, res) => {
+  try {
+    const rows = await dbQuery(
+      `SELECT id, nama, nis FROM santri 
+       WHERE sekolah_id = ? AND status = 'aktif' AND (kelas_id IS NULL OR kelas_id != ?)
+       ORDER BY nama`,
+      [req.sekolah_id, req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal mengambil data santri' });
+  }
+});
+
+// Assign santri to kelas
+router.post('/:id/santri', requireAdmin, async (req, res) => {
+  try {
+    const { santri_ids } = req.body;
+    if (!Array.isArray(santri_ids) || santri_ids.length === 0) {
+      return res.status(400).json({ error: 'Pilih minimal 1 santri' });
+    }
+    const kelas = await dbGet('SELECT * FROM kelas_sekolah WHERE id = ? AND sekolah_id = ?', [req.params.id, req.sekolah_id]);
+    if (!kelas) return res.status(404).json({ error: 'Kelas tidak ditemukan' });
+
+    let added = 0;
+    for (const sid of santri_ids) {
+      const affected = await dbUpdate('santri', { kelas_id: req.params.id }, 'id = ? AND sekolah_id = ?', [sid, req.sekolah_id]);
+      if (affected) added++;
+    }
+    res.json({ success: true, added, message: `${added} santri ditambahkan ke kelas` });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal menambah santri ke kelas' });
+  }
+});
+
+// Remove santri from kelas
+router.delete('/:id/santri/:santriId', requireAdmin, async (req, res) => {
+  try {
+    const affected = await dbUpdate('santri', { kelas_id: null }, 'id = ? AND kelas_id = ? AND sekolah_id = ?', [req.params.santriId, req.params.id, req.sekolah_id]);
+    if (!affected) return res.status(404).json({ error: 'Santri tidak ditemukan di kelas ini' });
+    res.json({ success: true, message: 'Santri dihapus dari kelas' });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal menghapus santri dari kelas' });
+  }
+});
+
 module.exports = router;

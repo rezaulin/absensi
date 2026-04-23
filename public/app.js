@@ -40,11 +40,13 @@ superStats:[],tenantList:[],
 dashStats:[],
 // Import
 showImport:false,importLoading:false,importResult:null,
-// Detail panel (kamar/kelompok)
+// Detail panel (kamar/kelompok/kelas)
 detailOpen:false,detailType:'',detailData:null,detailSantri:[],
 availableSantri:[],selectedSantriIds:[],loadingDetail:false,
 // Kelompok kegiatan filter
 kelompokKegiatanFilter:'',
+// Ustadz list for forms
+ustadzList:[],
 
 menuItems:[
 {id:'dashboard',label:'Dashboard',icon:'📊',roles:['admin','ustadz','wali','superadmin']},
@@ -87,8 +89,10 @@ if(p==='settings')return this.loadSettings();
 if(p==='super-admin')return this.loadSuperAdmin();
 if(p==='kelompok'){await this.loadKegiatanList();const d=await api('/api/kelompok');if(d)this.items=d;return}
 if(p==='kegiatan'){const d=await api('/api/kegiatan');if(d)this.items=d;return}
+if(p==='kamar'){await this.loadUstadzList();const d=await api('/api/kamar');if(d)this.items=d;return}
+if(p==='kelas'){const d=await api('/api/kelas');if(d)this.items=d;return}
 // Generic CRUD pages
-const endpointMap={kamar:'kamar',kelas:'kelas',pelanggaran:'pelanggaran',prestasi:'prestasi',catatan:'catatan',pengumuman:'pengumuman',users:'users'};
+const endpointMap={pelanggaran:'pelanggaran',prestasi:'prestasi',catatan:'catatan',pengumuman:'pengumuman',users:'users'};
 if(endpointMap[p]){const d=await api('/api/'+endpointMap[p]);if(d)this.items=d}
 },
 
@@ -110,6 +114,7 @@ this.dashStats=[
 
 async loadSantri(){const d=await api('/api/santri'+(this.search?'?search='+encodeURIComponent(this.search):''));if(d)this.items=d},
 async loadKegiatanList(){const d=await api('/api/kegiatan');this.kegiatanList=d||[]},
+async loadUstadzList(){const d=await api('/api/users');this.ustadzList=(d||[]).filter(u=>u.role==='ustadz'||u.role==='admin')},
 
 getDetail(pg,item){
 const map={
@@ -141,8 +146,8 @@ const santriFields=[
 ];
 const fields={
 santri:santriFields,
-kamar:[{name:'nama',label:'Nama Kamar',required:true},{name:'kapasitas',label:'Kapasitas',type:'number'},{name:'gedung',label:'Gedung'},{name:'lantai',label:'Lantai'},{name:'keterangan',label:'Keterangan',type:'textarea'}],
-kelas:[{name:'nama',label:'Nama Kelas',required:true},{name:'tingkat',label:'Tingkat'}],
+kamar:[{name:'nama',label:'Nama Kamar',required:true},{name:'kapasitas',label:'Jumlah Anggota (Kapasitas)',type:'number'},{name:'ustadz_id',label:'Ustadz Pengawas',type:'select',options:[{value:'',label:'-- Pilih Ustadz --'},...(this.ustadzList?.map(u=>({value:u.id,label:u.nama}))||[])]},{name:'gedung',label:'Gedung'},{name:'lantai',label:'Lantai'},{name:'keterangan',label:'Keterangan',type:'textarea'}],
+kelas:[{name:'nama',label:'Nama Kelas',required:true},{name:'tingkat',label:'Tingkat'},{name:'keterangan',label:'Keterangan',type:'textarea'}],
 kegiatan:[{name:'nama',label:'Nama Kegiatan',required:true},{name:'jenis',label:'Jenis',type:'select',options:[{value:'',label:'-- Pilih Jenis --'},{value:'harian',label:'Harian'},{value:'mingguan',label:'Mingguan'},{value:'bulanan',label:'Bulanan'},{value:'lainnya',label:'Lainnya'}]},{name:'jam_mulai',label:'Jam Mulai',type:'time'},{name:'jam_selesai',label:'Jam Selesai',type:'time'},{name:'keterangan',label:'Keterangan',type:'textarea'}],
 kelompok:[{name:'nama',label:'Nama Kelompok',required:true},{name:'kegiatan_id',label:'Kegiatan',type:'select',options:[{value:'',label:'-- Pilih Kegiatan --'},...(this.kegiatanList?.map(k=>({value:k.id,label:k.nama}))||[])]},{name:'keterangan',label:'Keterangan',type:'textarea'}],
 pelanggaran:[{name:'santri_id',label:'ID Santri',type:'number',required:true},{name:'jenis',label:'Jenis Pelanggaran',required:true},{name:'poin',label:'Poin',type:'number'},{name:'tanggal',label:'Tanggal',type:'date',required:true},{name:'keterangan',label:'Keterangan',type:'textarea'}],
@@ -158,6 +163,7 @@ return fields[pg]||[];
 async openModal(pg,data=null){
 if(pg==='santri'){await this.loadKamar();await this.loadKelasList()}
 if(pg==='kelompok'){await this.loadKegiatanList()}
+if(pg==='kamar'){await this.loadUstadzList()}
 const epMap={santri:'santri',kamar:'kamar',kelas:'kelas',kegiatan:'kegiatan',kelompok:'kelompok',pelanggaran:'pelanggaran',prestasi:'prestasi',catatan:'catatan',pengumuman:'pengumuman',users:'users','super-tenant':'super/sekolah'};
 this.modalEndpoint='/api/'+(epMap[pg]||pg);
 this.modalFields=this.getFields(pg);
@@ -243,6 +249,32 @@ async removeSantriFromKamar(santriId){
 if(!confirm('Hapus santri dari kamar ini?'))return;
 const d=await api('/api/kamar/'+this.detailData.id+'/santri/'+santriId,'DELETE');
 if(d?.success){this.showToast(d.message);await this.openDetailKamar(this.detailData);this.onPageChange()}
+else this.showToast(d?.error||'Gagal','error');
+},
+
+// ============ DETAIL KELAS ============
+async openDetailKelas(item){
+this.loadingDetail=true;this.detailType='kelas';this.detailOpen=true;
+this.availableSantri=[];this.selectedSantriIds=[];
+const d=await api('/api/kelas/'+item.id);
+if(d){this.detailData=d;this.detailSantri=d.santri||[]}
+this.loadingDetail=false;
+},
+async loadAvailableSantriKelas(){
+if(!this.detailData)return;
+const d=await api('/api/kelas/'+this.detailData.id+'/available-santri');
+this.availableSantri=d||[];this.selectedSantriIds=[];
+},
+async assignSantriToKelas(){
+if(this.selectedSantriIds.length===0)return this.showToast('Pilih santri','error');
+const d=await api('/api/kelas/'+this.detailData.id+'/santri','POST',{santri_ids:this.selectedSantriIds});
+if(d?.success){this.showToast(d.message);await this.openDetailKelas(this.detailData);await this.loadAvailableSantriKelas();this.onPageChange()}
+else this.showToast(d?.error||'Gagal','error');
+},
+async removeSantriFromKelas(santriId){
+if(!confirm('Hapus santri dari kelas ini?'))return;
+const d=await api('/api/kelas/'+this.detailData.id+'/santri/'+santriId,'DELETE');
+if(d?.success){this.showToast(d.message);await this.openDetailKelas(this.detailData);this.onPageChange()}
 else this.showToast(d?.error||'Gagal','error');
 },
 

@@ -3,12 +3,15 @@ const router = express.Router();
 const { dbQuery, dbGet, dbInsert, dbUpdate, dbDelete } = require('../db');
 const { requireAdmin } = require('../middleware/admin');
 
-// List kamar
+// List kamar with ustadz pengawas
 router.get('/', async (req, res) => {
   try {
     const rows = await dbQuery(
-      `SELECT k.*, (SELECT COUNT(*) FROM santri s WHERE s.kamar_id = k.id AND s.status = 'aktif') as jumlah_santri
-       FROM kamar k WHERE k.sekolah_id = ? ORDER BY k.nama`,
+      `SELECT k.*, u.nama as ustadz_nama,
+              (SELECT COUNT(*) FROM santri s WHERE s.kamar_id = k.id AND s.status = 'aktif') as jumlah_santri
+       FROM kamar k
+       LEFT JOIN users u ON k.ustadz_id = u.id
+       WHERE k.sekolah_id = ? ORDER BY k.nama`,
       [req.sekolah_id]
     );
     res.json(rows);
@@ -48,11 +51,12 @@ router.get('/:id/available-santri', async (req, res) => {
 // Create kamar
 router.post('/', requireAdmin, async (req, res) => {
   try {
-    const { nama, kapasitas, gedung, lantai, keterangan } = req.body;
+    const { nama, kapasitas, gedung, lantai, keterangan, ustadz_id } = req.body;
     if (!nama) return res.status(400).json({ error: 'Nama kamar harus diisi' });
     const id = await dbInsert('kamar', {
       sekolah_id: req.sekolah_id, nama, kapasitas: kapasitas || 20,
-      gedung: gedung || '', lantai: lantai || '', keterangan: keterangan || ''
+      gedung: gedung || '', lantai: lantai || '', keterangan: keterangan || '',
+      ustadz_id: ustadz_id || null
     });
     res.json({ success: true, id, message: 'Kamar berhasil ditambahkan' });
   } catch (err) {
@@ -64,8 +68,8 @@ router.post('/', requireAdmin, async (req, res) => {
 router.put('/:id', requireAdmin, async (req, res) => {
   try {
     const data = {};
-    ['nama','kapasitas','gedung','lantai','keterangan'].forEach(f => {
-      if (req.body[f] !== undefined) data[f] = req.body[f];
+    ['nama','kapasitas','gedung','lantai','keterangan','ustadz_id'].forEach(f => {
+      if (req.body[f] !== undefined) data[f] = f === 'ustadz_id' ? (req.body[f] || null) : req.body[f];
     });
     const affected = await dbUpdate('kamar', data, 'id = ? AND sekolah_id = ?', [req.params.id, req.sekolah_id]);
     if (!affected) return res.status(404).json({ error: 'Kamar tidak ditemukan' });
